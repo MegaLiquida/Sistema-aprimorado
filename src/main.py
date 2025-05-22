@@ -27,6 +27,10 @@ else:
     DB_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'produtos.db')
     print(f"Usando SQLite localmente: {DB_FILE}")
 
+# Configuração da API do Mercado Livre
+ML_CLIENT_ID = os.environ.get('MERCADO_LIVRE_CLIENT_ID')
+ML_CLIENT_SECRET = os.environ.get('ML_CLIENT_SECRET')
+
 # Função para obter conexão com o banco de dados
 def get_db_connection():
     if DB_TYPE == 'postgres':
@@ -477,8 +481,83 @@ def excluir_produto(produto_id, usuario_id):
     conn.commit()
     conn.close()
 
+# Função para obter token do Mercado Livre
+def get_mercado_livre_token():
+    if not ML_CLIENT_ID or not ML_CLIENT_SECRET:
+        print("Credenciais do Mercado Livre não configuradas")
+        return None
+    
+    try:
+        url = "https://api.mercadolibre.com/oauth/token"
+        payload = {
+            "grant_type": "client_credentials",
+            "client_id": ML_CLIENT_ID,
+            "client_secret": ML_CLIENT_SECRET
+        }
+        headers = {
+            "accept": "application/json",
+            "content-type": "application/x-www-form-urlencoded"
+        }
+        
+        response = requests.post(url, data=payload, headers=headers, timeout=10)
+        
+        if response.status_code == 200:
+            return response.json().get("access_token")
+        else:
+            print(f"Erro ao obter token do Mercado Livre: {response.status_code} - {response.text}")
+            return None
+    except Exception as e:
+        print(f"Erro ao obter token do Mercado Livre: {str(e)}")
+        return None
+
+# Função para buscar informações do produto por EAN no Mercado Livre
+def buscar_produto_mercado_livre(ean):
+    token = get_mercado_livre_token()
+    if not token:
+        return None
+    
+    try:
+        url = f"https://api.mercadolibre.com/sites/MLB/search?q={ean}"
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Accept": "application/json"
+        }
+        
+        response = requests.get(url, headers=headers, timeout=10)
+        
+        if response.status_code == 200:
+            data = response.json()
+            results = data.get("results", [])
+            
+            if results:
+                produto = results[0]  # Pegar o primeiro resultado
+                
+                # Extrair informações relevantes
+                return {
+                    "success": True,
+                    "data": {
+                        "nome": produto.get("title", f"Produto {ean}"),
+                        "marca": produto.get("attributes", [{}])[0].get("value_name", "") if produto.get("attributes") else "",
+                        "categoria": produto.get("category_id", ""),
+                        "preco": produto.get("price", 0),
+                        "link": produto.get("permalink", ""),
+                        "imagem": produto.get("thumbnail", "")
+                    }
+                }
+            
+        return None
+    except Exception as e:
+        print(f"Erro ao buscar produto no Mercado Livre: {str(e)}")
+        return None
+
 # Função para buscar informações do produto por EAN online
 def buscar_produto_online(ean):
+    # Primeiro, tentar buscar no Mercado Livre
+    ml_result = buscar_produto_mercado_livre(ean)
+    if ml_result:
+        return ml_result
+    
+    # Se não encontrar no Mercado Livre, tentar na API alternativa
     try:
         # Primeiro, tentamos obter um token de acesso
         token_url = "https://gtin.rscsistemas.com.br/oauth/token"
@@ -657,7 +736,7 @@ def validar_lista_route():
     return redirect(url_for('admin_dashboard'))
 
 # API para buscar produto por EAN
-@app.route('/api/buscar_produto', methods=['GET'])
+@app.route('/api/buscar-produto', methods=['GET'])
 def api_buscar_produto():
     if 'usuario_id' not in session:
         return jsonify({"error": "Não autenticado"}), 401
@@ -677,10 +756,24 @@ def api_buscar_produto():
     
     # Se não existir localmente, buscar online
     resultado = buscar_produto_online(ean)
+    
+    # Registrar a consulta do usuário
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Registrar que o usuário consultou este produto
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        print(f"Consulta registrada: Usuário ID {session['usuario_id']} consultou produto {ean}")
+        
+        conn.close()
+    except Exception as e:
+        print(f"Erro ao registrar consulta: {str(e)}")
+    
     return jsonify(resultado)
 
 # API para adicionar produto
-@app.route('/api/adicionar_produto', methods=['POST'])
+@app.route('/api/produtos', methods=['POST'])
 def api_adicionar_produto():
     if 'usuario_id' not in session:
         return jsonify({"error": "Não autenticado"}), 401
@@ -702,7 +795,7 @@ def api_adicionar_produto():
         return jsonify({"error": f"Erro ao adicionar produto: {str(e)}"}), 500
 
 # API para excluir produto
-@app.route('/api/excluir_produto/<int:produto_id>', methods=['DELETE'])
+@app.route('/api/produtos/<int:produto_id>', methods=['DELETE'])
 def api_excluir_produto(produto_id):
     if 'usuario_id' not in session:
         return jsonify({"error": "Não autenticado"}), 401
@@ -729,8 +822,20 @@ def api_enviar_lista():
     except Exception as e:
         return jsonify({"error": f"Erro ao enviar lista: {str(e)}"}), 500
 
+# API para listar produtos
+@app.route('/api/produtos', methods=['GET'])
+def api_listar_produtos():
+    if 'usuario_id' not in session:
+        return jsonify({"error": "Não autenticado"}), 401
+    
+    try:
+        produtos = carregar_produtos_usuario(session['usuario_id'], apenas_nao_enviados=True)
+        return jsonify(produtos)
+    except Exception as e:
+        return jsonify({"error": f"Erro ao listar produtos: {str(e)}"}), 500
+
 # Rota para exportar para Excel
-@app.route('/exportar_excel')
+@app.route('/api/export')
 def exportar_excel():
     if 'usuario_id' not in session:
         return redirect(url_for('login'))
