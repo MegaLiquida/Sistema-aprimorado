@@ -1,0 +1,574 @@
+{% extends "base.html" %}
+
+{% block title %}Painel de Listas Enviadas{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Cabeçalho do Painel -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="mb-1">
+                        <i class="fas fa-list-alt text-primary me-2"></i>
+                        Listas de Produtos Enviadas
+                    </h2>
+                    <p class="text-muted mb-0">Visualize e gerencie todas as listas enviadas pelos usuários</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-primary" onclick="atualizarListas()">
+                        <i class="fas fa-sync-alt me-1"></i> Atualizar
+                    </button>
+                    {% if session.is_admin %}
+                    <button class="btn btn-success" onclick="exportarListas()">
+                        <i class="fas fa-download me-1"></i> Exportar
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros e Busca -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <form id="filtrosForm" class="row g-3">
+                        <div class="col-md-4">
+                            <label for="busca" class="form-label">
+                                <i class="fas fa-search me-1"></i> Pesquisar
+                            </label>
+                            <input type="text" class="form-control" id="busca" 
+                                   placeholder="Pesquisar por EAN ou palavra-chave na descrição">
+                        </div>
+                        <div class="col-md-2">
+                            <label for="status" class="form-label">Status</label>
+                            <select class="form-select" id="status">
+                                <option value="">Todos</option>
+                                <option value="pendente">Pendente</option>
+                                <option value="validada">Validada</option>
+                                <option value="rejeitada">Rejeitada</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="usuario" class="form-label">Usuário</label>
+                            <select class="form-select" id="usuario">
+                                <option value="">Todos</option>
+                                {% for user in usuarios %}
+                                <option value="{{ user.id }}">{{ user.nome }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="responsavel" class="form-label">Responsável</label>
+                            <select class="form-select" id="responsavel">
+                                <option value="">Todos</option>
+                                {% for resp in responsaveis %}
+                                <option value="{{ resp.id }}">{{ resp.nome }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">&nbsp;</label>
+                            <button type="button" class="btn btn-primary d-block w-100" onclick="aplicarFiltros()">
+                                <i class="fas fa-filter me-1"></i> Filtrar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Estatísticas Rápidas -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="mb-0" id="totalPendentes">{{ stats.pendentes }}</h4>
+                            <small>Pendentes</small>
+                        </div>
+                        <i class="fas fa-clock fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="mb-0" id="totalValidadas">{{ stats.validadas }}</h4>
+                            <small>Validadas</small>
+                        </div>
+                        <i class="fas fa-check-circle fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-danger text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="mb-0" id="totalRejeitadas">{{ stats.rejeitadas }}</h4>
+                            <small>Rejeitadas</small>
+                        </div>
+                        <i class="fas fa-times-circle fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="mb-0" id="totalListas">{{ stats.total }}</h4>
+                            <small>Total de Listas</small>
+                        </div>
+                        <i class="fas fa-list fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lista de Listas Enviadas -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-table me-2"></i>
+                        Listas Enviadas
+                        <span class="badge bg-secondary ms-2" id="totalResultados">{{ listas|length }}</span>
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <div id="loadingListas" class="text-center p-4 d-none">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Carregando...</span>
+                        </div>
+                        <p class="mt-2 mb-0">Carregando listas...</p>
+                    </div>
+                    
+                    <div id="listaContainer">
+                        {% if listas %}
+                        {% for lista in listas %}
+                        <div class="lista-item border-bottom" data-lista-id="{{ lista.id }}">
+                            <div class="p-3">
+                                <div class="row align-items-center">
+                                    <div class="col-md-6">
+                                        <div class="d-flex align-items-center">
+                                            <div class="me-3">
+                                                <span class="badge bg-{{ lista.get_status_class() }} fs-6">
+                                                    {{ lista.get_status_display() }}
+                                                </span>
+                                            </div>
+                                            <div>
+                                                <h6 class="mb-1">
+                                                    Lista de <strong>{{ lista.usuario.nome }}</strong>
+                                                </h6>
+                                                <small class="text-muted">
+                                                    <i class="fas fa-calendar me-1"></i>
+                                                    {{ lista.timestamp.strftime('%d/%m/%Y %H:%M') }}
+                                                    {% if lista.responsavel %}
+                                                    | <i class="fas fa-user-shield me-1"></i>
+                                                    Resp: {{ lista.responsavel.nome }}
+                                                    {% endif %}
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 text-center">
+                                        <div class="row">
+                                            <div class="col-6">
+                                                <small class="text-muted d-block">Produtos</small>
+                                                <strong>{{ lista.get_total_produtos() }}</strong>
+                                            </div>
+                                            <div class="col-6">
+                                                <small class="text-muted d-block">Quantidade</small>
+                                                <strong>{{ lista.get_total_quantidade() }}</strong>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 text-end">
+                                        <div class="btn-group" role="group">
+                                            <button class="btn btn-outline-primary btn-sm" 
+                                                    onclick="visualizarLista({{ lista.id }})">
+                                                <i class="fas fa-eye me-1"></i> Ver
+                                            </button>
+                                            {% if session.is_admin and lista.status == 'pendente' %}
+                                            <button class="btn btn-outline-success btn-sm" 
+                                                    onclick="validarLista({{ lista.id }})">
+                                                <i class="fas fa-check me-1"></i> Validar
+                                            </button>
+                                            {% endif %}
+                                            {% if session.is_admin %}
+                                            <button class="btn btn-outline-secondary btn-sm" 
+                                                    onclick="editarLista({{ lista.id }})">
+                                                <i class="fas fa-edit me-1"></i> Editar
+                                            </button>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Detalhes expandíveis -->
+                                <div class="collapse mt-3" id="detalhes{{ lista.id }}">
+                                    <div class="border-top pt-3">
+                                        <div class="row">
+                                            <div class="col-md-8">
+                                                <h6>Produtos na Lista:</h6>
+                                                <div class="table-responsive">
+                                                    <table class="table table-sm">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>EAN</th>
+                                                                <th>Produto</th>
+                                                                <th>Cor</th>
+                                                                <th>Voltagem</th>
+                                                                <th>Quantidade</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {% for produto in lista.produtos %}
+                                                            <tr>
+                                                                <td><code>{{ produto.ean }}</code></td>
+                                                                <td>{{ produto.nome }}</td>
+                                                                <td>{{ produto.cor or '-' }}</td>
+                                                                <td>{{ produto.voltagem or '-' }}</td>
+                                                                <td><span class="badge bg-primary">{{ produto.quantidade }}</span></td>
+                                                            </tr>
+                                                            {% endfor %}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                {% if lista.observacoes %}
+                                                <h6>Observações:</h6>
+                                                <p class="text-muted">{{ lista.observacoes }}</p>
+                                                {% endif %}
+                                                
+                                                {% if lista.data_validacao %}
+                                                <h6>Validação:</h6>
+                                                <p class="text-muted">
+                                                    <i class="fas fa-calendar me-1"></i>
+                                                    {{ lista.data_validacao.strftime('%d/%m/%Y %H:%M') }}
+                                                    {% if lista.validador %}
+                                                    <br><i class="fas fa-user me-1"></i>
+                                                    {{ lista.validador.nome }}
+                                                    {% endif %}
+                                                </p>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                        {% else %}
+                        <div class="text-center p-5">
+                            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">Nenhuma lista encontrada</h5>
+                            <p class="text-muted">Não há listas enviadas que correspondam aos filtros aplicados.</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Paginação -->
+                {% if pagination and pagination.pages > 1 %}
+                <div class="card-footer">
+                    <nav aria-label="Navegação de páginas">
+                        <ul class="pagination justify-content-center mb-0">
+                            {% if pagination.has_prev %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('painel_listas', page=pagination.prev_num) }}">
+                                    <i class="fas fa-chevron-left"></i>
+                                </a>
+                            </li>
+                            {% endif %}
+                            
+                            {% for page_num in pagination.iter_pages() %}
+                                {% if page_num %}
+                                    {% if page_num != pagination.page %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="{{ url_for('painel_listas', page=page_num) }}">{{ page_num }}</a>
+                                    </li>
+                                    {% else %}
+                                    <li class="page-item active">
+                                        <span class="page-link">{{ page_num }}</span>
+                                    </li>
+                                    {% endif %}
+                                {% else %}
+                                <li class="page-item disabled">
+                                    <span class="page-link">…</span>
+                                </li>
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% if pagination.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('painel_listas', page=pagination.next_num) }}">
+                                    <i class="fas fa-chevron-right"></i>
+                                </a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Visualizar Lista -->
+<div class="modal fade" id="modalVisualizarLista" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-eye me-2"></i>
+                    Detalhes da Lista
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="modalVisualizarConteudo">
+                <!-- Conteúdo carregado via AJAX -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Validar Lista -->
+<div class="modal fade" id="modalValidarLista" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-check-circle me-2"></i>
+                    Validar Lista
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formValidarLista">
+                <div class="modal-body">
+                    <input type="hidden" id="validarListaId">
+                    
+                    <div class="mb-3">
+                        <label for="responsavelValidacao" class="form-label">Responsável</label>
+                        <select class="form-select" id="responsavelValidacao" required>
+                            <option value="">Selecione um responsável</option>
+                            {% for resp in responsaveis %}
+                            <option value="{{ resp.id }}">{{ resp.nome }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="pinValidacao" class="form-label">PIN do Responsável</label>
+                        <input type="password" class="form-control" id="pinValidacao" 
+                               placeholder="Digite o PIN de 4 dígitos" maxlength="4" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="statusValidacao" class="form-label">Status</label>
+                        <select class="form-select" id="statusValidacao" required>
+                            <option value="validada">Validar (Aprovar)</option>
+                            <option value="rejeitada">Rejeitar</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="observacoesValidacao" class="form-label">Observações</label>
+                        <textarea class="form-control" id="observacoesValidacao" rows="3" 
+                                  placeholder="Observações sobre a validação (opcional)"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-check me-1"></i> Confirmar Validação
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// JavaScript para funcionalidades do painel
+document.addEventListener('DOMContentLoaded', function() {
+    // Configurar busca em tempo real
+    const buscaInput = document.getElementById('busca');
+    let timeoutBusca;
+    
+    buscaInput.addEventListener('input', function() {
+        clearTimeout(timeoutBusca);
+        timeoutBusca = setTimeout(aplicarFiltros, 500);
+    });
+    
+    // Configurar formulário de validação
+    document.getElementById('formValidarLista').addEventListener('submit', function(e) {
+        e.preventDefault();
+        confirmarValidacao();
+    });
+});
+
+function aplicarFiltros() {
+    const filtros = {
+        busca: document.getElementById('busca').value,
+        status: document.getElementById('status').value,
+        usuario: document.getElementById('usuario').value,
+        responsavel: document.getElementById('responsavel').value
+    };
+    
+    mostrarLoading(true);
+    
+    fetch('/api/listas/filtrar', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(filtros)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            atualizarListaContainer(data.listas);
+            atualizarEstatisticas(data.stats);
+        } else {
+            mostrarAlerta('Erro ao aplicar filtros: ' + data.message, 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        mostrarAlerta('Erro ao aplicar filtros', 'danger');
+    })
+    .finally(() => {
+        mostrarLoading(false);
+    });
+}
+
+function visualizarLista(listaId) {
+    // Expandir/colapsar detalhes
+    const detalhes = document.getElementById('detalhes' + listaId);
+    const collapse = new bootstrap.Collapse(detalhes);
+    collapse.toggle();
+}
+
+function validarLista(listaId) {
+    document.getElementById('validarListaId').value = listaId;
+    const modal = new bootstrap.Modal(document.getElementById('modalValidarLista'));
+    modal.show();
+}
+
+function confirmarValidacao() {
+    const listaId = document.getElementById('validarListaId').value;
+    const responsavelId = document.getElementById('responsavelValidacao').value;
+    const pin = document.getElementById('pinValidacao').value;
+    const status = document.getElementById('statusValidacao').value;
+    const observacoes = document.getElementById('observacoesValidacao').value;
+    
+    const dados = {
+        responsavel_id: responsavelId,
+        pin: pin,
+        status: status,
+        observacoes: observacoes
+    };
+    
+    fetch(`/api/listas/${listaId}/validar`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(dados)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            mostrarAlerta('Lista validada com sucesso!', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('modalValidarLista')).hide();
+            atualizarListas();
+        } else {
+            mostrarAlerta('Erro na validação: ' + data.message, 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        mostrarAlerta('Erro ao validar lista', 'danger');
+    });
+}
+
+function atualizarListas() {
+    location.reload();
+}
+
+function exportarListas() {
+    window.open('/api/listas/exportar', '_blank');
+}
+
+function editarLista(listaId) {
+    // Implementar edição de lista
+    mostrarAlerta('Funcionalidade de edição em desenvolvimento', 'info');
+}
+
+function mostrarLoading(mostrar) {
+    const loading = document.getElementById('loadingListas');
+    const container = document.getElementById('listaContainer');
+    
+    if (mostrar) {
+        loading.classList.remove('d-none');
+        container.style.opacity = '0.5';
+    } else {
+        loading.classList.add('d-none');
+        container.style.opacity = '1';
+    }
+}
+
+function atualizarListaContainer(listas) {
+    // Implementar atualização dinâmica da lista
+    // Por enquanto, recarregar a página
+    location.reload();
+}
+
+function atualizarEstatisticas(stats) {
+    document.getElementById('totalPendentes').textContent = stats.pendentes;
+    document.getElementById('totalValidadas').textContent = stats.validadas;
+    document.getElementById('totalRejeitadas').textContent = stats.rejeitadas;
+    document.getElementById('totalListas').textContent = stats.total;
+}
+
+function mostrarAlerta(mensagem, tipo) {
+    // Criar alerta Bootstrap
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${tipo} alert-dismissible fade show position-fixed`;
+    alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    alertDiv.innerHTML = `
+        ${mensagem}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(alertDiv);
+    
+    // Remover automaticamente após 5 segundos
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.remove();
+        }
+    }, 5000);
+}
+</script>
+{% endblock %}
+

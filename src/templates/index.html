@@ -1,0 +1,398 @@
+{% extends "base.html" %}
+
+{% block title %}Sistema EAN - Cadastro de Produtos{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-barcode me-2"></i>Cadastro de Produtos</h5>
+            </div>
+            <div class="card-body">
+                <form id="productForm">
+                    <div class="mb-3">
+                        <label for="ean" class="form-label">Código EAN</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="ean" placeholder="Digite o código EAN" required>
+                            <button type="button" class="btn btn-outline-primary" id="searchBtn">
+                                <i class="fas fa-search"></i> Buscar
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="nome" class="form-label">Nome do Produto</label>
+                        <input type="text" class="form-control" id="nome" required>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="cor" class="form-label">Cor</label>
+                                <input type="text" class="form-control" id="cor">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="voltagem" class="form-label">Voltagem</label>
+                                <input type="text" class="form-control" id="voltagem">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="modelo" class="form-label">Modelo</label>
+                                <input type="text" class="form-control" id="modelo">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="quantidade" class="form-label">Quantidade</label>
+                                <input type="number" class="form-control" id="quantidade" value="1" min="1" required>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-plus me-2"></i>Adicionar Produto
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5><i class="fas fa-list me-2"></i>Produtos Cadastrados</h5>
+                <div>
+                    <button class="btn btn-primary btn-sm me-2" id="sendListBtn">
+                        <i class="fas fa-paper-plane me-1"></i>Enviar Lista
+                    </button>
+                    <button class="btn btn-success btn-sm" id="exportBtn">
+                        <i class="fas fa-file-excel me-1"></i>Exportar Excel
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>EAN</th>
+                                <th>Nome</th>
+                                <th>Qtd</th>
+                            </tr>
+                        </thead>
+                        <tbody id="productsTable">
+                            <!-- Produtos serão carregados aqui -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Confirmação de Envio -->
+<div class="modal fade" id="confirmSendModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmação de Envio</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Para confirmar o envio da lista, informe a senha PIN do responsável.</p>
+                
+                <div class="mb-3">
+                    <label for="responsavelSelect" class="form-label">Responsável*</label>
+                    <select class="form-select" id="responsavelSelect" required>
+                        <option value="">Selecione o responsável</option>
+                        <!-- Responsáveis serão carregados aqui -->
+                    </select>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="pinInput" class="form-label">Senha PIN (4 dígitos)*</label>
+                    <input type="password" class="form-control" id="pinInput" 
+                           placeholder="Digite a senha PIN de 4 dígitos do responsável selecionado" 
+                           maxlength="4" pattern="[0-9]{4}" required>
+                    <div class="form-text">Digite a senha PIN de 4 dígitos do responsável selecionado.</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="confirmSendBtn">Confirmar Envio</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Loading -->
+<div class="modal fade" id="loadingModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-body text-center">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Carregando...</span>
+                </div>
+                <p class="mt-2 mb-0">Buscando produto...</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const eanInput = document.getElementById('ean');
+    const searchBtn = document.getElementById('searchBtn');
+    const productForm = document.getElementById('productForm');
+    const exportBtn = document.getElementById('exportBtn');
+    const sendListBtn = document.getElementById('sendListBtn');
+    const loadingModal = new bootstrap.Modal(document.getElementById('loadingModal'));
+    const confirmSendModal = new bootstrap.Modal(document.getElementById('confirmSendModal'));
+    
+    // Carregar produtos ao iniciar
+    loadProducts();
+    loadResponsaveis();
+    
+    // Buscar produto por EAN
+    searchBtn.addEventListener('click', searchProduct);
+    eanInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            searchProduct();
+        }
+    });
+    
+    // Submeter formulário
+    productForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        addProduct();
+    });
+    
+    // Exportar Excel
+    exportBtn.addEventListener('click', function() {
+        window.location.href = '/export_excel';
+    });
+    
+    // Enviar Lista
+    sendListBtn.addEventListener('click', function() {
+        // Verificar se há produtos cadastrados
+        fetch('/get_user_products')
+        .then(response => response.json())
+        .then(products => {
+            if (products.length === 0) {
+                showAlert('Não há produtos cadastrados para enviar.', 'warning');
+                return;
+            }
+            
+            // Limpar campos do modal
+            document.getElementById('responsavelSelect').value = '';
+            document.getElementById('pinInput').value = '';
+            
+            // Mostrar modal de confirmação
+            confirmSendModal.show();
+        })
+        .catch(error => {
+            console.error('Erro ao verificar produtos:', error);
+            showAlert('Erro ao verificar produtos', 'danger');
+        });
+    });
+    
+    // Confirmar envio
+    document.getElementById('confirmSendBtn').addEventListener('click', function() {
+        const responsavelId = document.getElementById('responsavelSelect').value;
+        const pin = document.getElementById('pinInput').value;
+        
+        if (!responsavelId) {
+            showAlert('Selecione um responsável', 'warning');
+            return;
+        }
+        
+        if (!pin || pin.length !== 4) {
+            showAlert('Digite um PIN de 4 dígitos', 'warning');
+            return;
+        }
+        
+        // Enviar lista
+        fetch('/enviar_lista', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                responsavel_id: responsavelId,
+                pin: pin
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showAlert(data.message, 'success');
+                confirmSendModal.hide();
+                loadProducts(); // Recarregar produtos (lista pode ter sido limpa)
+            } else {
+                showAlert('Erro: ' + data.message, 'danger');
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao enviar lista:', error);
+            showAlert('Erro ao enviar lista', 'danger');
+        });
+    });
+    
+    // Permitir apenas números no campo PIN
+    document.getElementById('pinInput').addEventListener('input', function(e) {
+        this.value = this.value.replace(/[^0-9]/g, '');
+    });
+    
+    function searchProduct() {
+        const ean = eanInput.value.trim();
+        if (!ean) {
+            alert('Digite um código EAN');
+            return;
+        }
+        
+        loadingModal.show();
+        
+        fetch('/search_ean', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ean: ean})
+        })
+        .then(response => response.json())
+        .then(data => {
+            loadingModal.hide();
+            
+            if (data.found) {
+                document.getElementById('nome').value = data.nome;
+                document.getElementById('cor').value = data.cor;
+                document.getElementById('voltagem').value = data.voltagem;
+                document.getElementById('modelo').value = data.modelo;
+                
+                if (data.source === 'local') {
+                    showAlert('Produto encontrado no banco local!', 'info');
+                } else {
+                    showAlert('Produto encontrado em base externa!', 'success');
+                }
+            } else {
+                showAlert('Produto não encontrado. Preencha manualmente.', 'warning');
+                document.getElementById('nome').focus();
+            }
+        })
+        .catch(error => {
+            loadingModal.hide();
+            console.error('Erro:', error);
+            showAlert('Erro ao buscar produto', 'danger');
+        });
+    }
+    
+    function addProduct() {
+        const formData = {
+            ean: document.getElementById('ean').value,
+            nome: document.getElementById('nome').value,
+            cor: document.getElementById('cor').value,
+            voltagem: document.getElementById('voltagem').value,
+            modelo: document.getElementById('modelo').value,
+            quantidade: document.getElementById('quantidade').value
+        };
+        
+        fetch('/add_product', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showAlert(data.message, 'success');
+                productForm.reset();
+                document.getElementById('quantidade').value = '1';
+                loadProducts();
+            } else {
+                showAlert('Erro ao adicionar produto', 'danger');
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            showAlert('Erro ao adicionar produto', 'danger');
+        });
+    }
+    
+    function loadProducts() {
+        fetch('/get_user_products')
+        .then(response => response.json())
+        .then(products => {
+            const tbody = document.getElementById('productsTable');
+            tbody.innerHTML = '';
+            
+            products.forEach(product => {
+                const row = tbody.insertRow();
+                row.innerHTML = `
+                    <td>${product.ean}</td>
+                    <td title="${product.nome}">${product.nome.length > 30 ? product.nome.substring(0, 30) + '...' : product.nome}</td>
+                    <td>${product.quantidade}</td>
+                `;
+            });
+        })
+        .catch(error => {
+            console.error('Erro ao carregar produtos:', error);
+        });
+    }
+    
+    function loadResponsaveis() {
+        fetch('/get_responsaveis')
+        .then(response => response.json())
+        .then(responsaveis => {
+            const select = document.getElementById('responsavelSelect');
+            select.innerHTML = '<option value="">Selecione o responsável</option>';
+            
+            responsaveis.forEach(responsavel => {
+                if (responsavel.ativo) {
+                    const option = document.createElement('option');
+                    option.value = responsavel.id;
+                    option.textContent = responsavel.nome;
+                    select.appendChild(option);
+                }
+            });
+        })
+        .catch(error => {
+            console.error('Erro ao carregar responsáveis:', error);
+        });
+    }
+    
+    function showAlert(message, type) {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+        alertDiv.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        const container = document.querySelector('main.container');
+        container.insertBefore(alertDiv, container.firstChild);
+        
+        // Auto-dismiss after 5 seconds
+        setTimeout(() => {
+            if (alertDiv.parentNode) {
+                alertDiv.remove();
+            }
+        }, 5000);
+    }
+});
+</script>
+{% endblock %}
+

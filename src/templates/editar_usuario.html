@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+
+{% block title %}Editar Usuário - Sistema EAN{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="mb-1">
+                        <i class="fas fa-user-edit text-primary me-2"></i>
+                        Editar Usuário
+                    </h2>
+                    <p class="text-muted mb-0">Edite as informações do usuário existente</p>
+                </div>
+                <a href="{{ url_for("admin.listar_usuarios") }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i> Voltar
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-user-cog me-2"></i>
+                        Informações do Usuário
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" id="formEditarUsuario">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="nome" class="form-label">
+                                        <i class="fas fa-user me-1"></i> Nome de Usuário *
+                                    </label>
+                                    <input type="text" class="form-control" id="nome" name="nome" 
+                                           placeholder="Digite o nome de usuário" value="{{ usuario.nome }}" required>
+                                    <div class="form-text">
+                                        Mínimo 3 caracteres. Apenas letras, números, _ e -
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="nova_senha" class="form-label">
+                                        <i class="fas fa-lock me-1"></i> Nova Senha
+                                    </label>
+                                    <input type="password" class="form-control" id="nova_senha" name="nova_senha" 
+                                           placeholder="Deixe em branco para não alterar">
+                                    <div class="form-text">
+                                        Mínimo 4 caracteres
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="tipo_usuario" class="form-label">
+                                        <i class="fas fa-user-tag me-1"></i> Tipo de Usuário *
+                                    </label>
+                                    <select class="form-select" id="tipo_usuario" name="tipo_usuario" required>
+                                        <option value="ean" {% if usuario.tipo_usuario == 'ean' %}selected{% endif %}>Consulta EAN - Acesso ao painel de consultas de produtos</option>
+                                        <option value="listas" {% if usuario.tipo_usuario == 'listas' %}selected{% endif %}>Painel de Listas - Acesso ao painel onde as listas são enviadas</option>
+                                        <option value="admin" {% if usuario.tipo_usuario == 'admin' %}selected{% endif %}>Administrador - Acesso completo ao sistema</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="ativo" class="form-label">
+                                        <i class="fas fa-toggle-on me-1"></i> Status
+                                    </label>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="ativo" name="ativo" {% if usuario.ativo %}checked{% endif %}>
+                                        <label class="form-check-label" for="ativo">Usuário Ativo</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Descrição dos tipos de usuário -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <div class="alert alert-info">
+                                    <h6><i class="fas fa-info-circle me-2"></i>Tipos de Usuário:</h6>
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <strong><i class="fas fa-search text-primary me-1"></i> Consulta EAN</strong>
+                                            <p class="small mb-0">Pode consultar produtos por código EAN, adicionar novos produtos e exportar dados.</p>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <strong><i class="fas fa-list text-success me-1"></i> Painel de Listas</strong>
+                                            <p class="small mb-0">Pode visualizar listas enviadas, enviar novas listas e acompanhar validações.</p>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <strong><i class="fas fa-crown text-warning me-1"></i> Administrador</strong>
+                                            <p class="small mb-0">Acesso completo: gerenciar usuários, responsáveis, validar listas e todas as funcionalidades.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <div class="d-flex justify-content-between">
+                                    <a href="{{ url_for("admin.listar_usuarios") }}" class="btn btn-secondary">
+                                        <i class="fas fa-times me-1"></i> Cancelar
+                                    </a>
+                                    <button type="submit" class="btn btn-success">
+                                        <i class="fas fa-save me-1"></i> Salvar Alterações
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const formEditarUsuario = document.getElementById("formEditarUsuario");
+    
+    formEditarUsuario.addEventListener("submit", function(e) {
+        e.preventDefault();
+        
+        const nome = document.getElementById("nome").value.trim();
+        const novaSenha = document.getElementById("nova_senha").value;
+        const tipoUsuario = document.getElementById("tipo_usuario").value;
+        const ativo = document.getElementById("ativo").checked;
+        
+        // Validações (simplificadas para o exemplo, adicione mais conforme necessário)
+        if (nome.length < 3) {
+            mostrarAlerta("Nome de usuário deve ter pelo menos 3 caracteres", "danger");
+            return;
+        }
+        
+        if (novaSenha && novaSenha.length < 4) {
+            mostrarAlerta("Nova senha deve ter pelo menos 4 caracteres", "danger");
+            return;
+        }
+        
+        const formData = new FormData();
+        formData.append("nome", nome);
+        formData.append("tipo_usuario", tipoUsuario);
+        formData.append("nova_senha", novaSenha);
+        formData.append("ativo", ativo ? "on" : "off");
+        
+        fetch("{{ url_for("admin.editar_usuario", user_id=usuario.id) }}", {
+            method: "POST",
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mostrarAlerta("Usuário atualizado com sucesso!", "success");
+                setTimeout(() => {
+                    window.location.href = "{{ url_for("admin.listar_usuarios") }}";
+                }, 2000);
+            } else {
+                mostrarAlerta("Erro ao atualizar usuário: " + data.message, "danger");
+            }
+        })
+        .catch(error => {
+            console.error("Erro:", error);
+            mostrarAlerta("Ocorreu um erro ao tentar atualizar o usuário.", "danger");
+        });
+    });
+});
+
+function mostrarAlerta(mensagem, tipo) {
+    const alertasExistentes = document.querySelectorAll(".alert-temp");
+    alertasExistentes.forEach(alerta => alerta.remove());
+    
+    const alertDiv = document.createElement("div");
+    alertDiv.className = `alert alert-${tipo} alert-dismissible fade show alert-temp position-fixed`;
+    alertDiv.style.cssText = "top: 20px; right: 20px; z-index: 9999; min-width: 300px;";
+    alertDiv.innerHTML = `
+        ${mensagem}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(alertDiv);
+    
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.remove();
+        }
+    }, 5000);
+}
+</script>
+{% endblock %}
+

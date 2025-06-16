@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+
+{% block title %}Painel Administrativo - Sistema EAN{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h2><i class="fas fa-cog me-2"></i>Painel Administrativo</h2>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-4">
+        <a href="{{ url_for('admin.listar_usuarios') }}" class="card text-white bg-primary mb-3 text-decoration-none">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4>{{ total_users }}</h4>
+                        <p class="mb-0">Usuários</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-users fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </a>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card text-white bg-success">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4>{{ total_products }}</h4>
+                        <p class="mb-0">Produtos</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-box fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <a href="{{ url_for('listas.painel_listas') }}" class="card text-white bg-info mb-3 text-decoration-none">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4>{{ total_lists }}</h4>
+                        <p class="mb-0">Listas</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-list fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-chart-bar me-2"></i>Ações Rápidas</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('export_excel') }}" class="btn btn-success">
+                        <i class="fas fa-file-excel me-2"></i>Exportar Todos os Produtos
+                    </a>
+                    <a href="{{ url_for('index') }}" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>Cadastrar Produtos
+                    </a>
+                    <button class="btn btn-warning" onclick="clearDatabase()">
+                        <i class="fas fa-trash me-2"></i>Limpar Base de Dados
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-clock me-2"></i>Atividade Recente</h5>
+            </div>
+            <div class="card-body">
+                {% if recent_lists %}
+                    <div class="list-group list-group-flush">
+                        {% for lista in recent_lists %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>Lista #{{ lista.id }}</strong><br>
+                                <small class="text-muted">{{ lista.timestamp.strftime('%d/%m/%Y %H:%M') }}</small>
+                            </div>
+                            <span class="badge bg-{{ 'success' if lista.validado else 'warning' }}">
+                                {{ 'Validada' if lista.validado else 'Pendente' }}
+                            </span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted">Nenhuma atividade recente</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-info-circle me-2"></i>Informações do Sistema</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Versão do Sistema</h6>
+                        <p>Sistema EAN Windows 11 v1.0</p>
+                        
+                        <h6>Banco de Dados</h6>
+                        <p>SQLite (Local)</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Responsáveis Cadastrados</h6>
+                        <ul>
+                            <li>Liliane (PIN: 5584)</li>
+                            <li>Rogerio (PIN: 9841)</li>
+                            <li>Celso (PIN: 2122)</li>
+                            <li>Marcos (PIN: 6231)</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function clearDatabase() {
+    if (confirm('Tem certeza que deseja limpar toda a base de dados? Esta ação não pode ser desfeita.')) {
+        // Implementar limpeza da base de dados
+        alert('Funcionalidade de limpeza será implementada em versão futura.');
+    }
+}
+</script>
+{% endblock %}
+

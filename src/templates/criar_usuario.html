@@ -1,0 +1,251 @@
+{% extends "base.html" %}
+
+{% block title %}Criar Usuário - Sistema EAN{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="mb-1">
+                        <i class="fas fa-user-plus text-primary me-2"></i>
+                        Criar Novo Usuário
+                    </h2>
+                    <p class="text-muted mb-0">Adicione um novo usuário ao sistema com permissões específicas</p>
+                </div>
+                <a href="{{ url_for('admin_panel') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i> Voltar
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-user-cog me-2"></i>
+                        Informações do Usuário
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" id="formCriarUsuario">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="nome" class="form-label">
+                                        <i class="fas fa-user me-1"></i> Nome de Usuário *
+                                    </label>
+                                    <input type="text" class="form-control" id="nome" name="nome" 
+                                           placeholder="Digite o nome de usuário" required>
+                                    <div class="form-text">
+                                        Mínimo 3 caracteres. Apenas letras, números, _ e -
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="senha" class="form-label">
+                                        <i class="fas fa-lock me-1"></i> Senha *
+                                    </label>
+                                    <input type="password" class="form-control" id="senha" name="senha" 
+                                           placeholder="Digite a senha" required>
+                                    <div class="form-text">
+                                        Mínimo 4 caracteres
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="confirmar_senha" class="form-label">
+                                        <i class="fas fa-lock me-1"></i> Confirmar Senha *
+                                    </label>
+                                    <input type="password" class="form-control" id="confirmar_senha" name="confirmar_senha" 
+                                           placeholder="Confirme a senha" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="tipo_usuario" class="form-label">
+                                        <i class="fas fa-user-tag me-1"></i> Tipo de Usuário *
+                                    </label>
+                                    <select class="form-select" id="tipo_usuario" name="tipo_usuario" required>
+                                        <option value="">Selecione o tipo de usuário</option>
+                                        <option value="ean">Consulta EAN - Acesso ao painel de consultas de produtos</option>
+                                        <option value="listas">Painel de Listas - Acesso ao painel onde as listas são enviadas</option>
+                                        <option value="admin">Administrador - Acesso completo ao sistema</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Descrição dos tipos de usuário -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <div class="alert alert-info">
+                                    <h6><i class="fas fa-info-circle me-2"></i>Tipos de Usuário:</h6>
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <strong><i class="fas fa-search text-primary me-1"></i> Consulta EAN</strong>
+                                            <p class="small mb-0">Pode consultar produtos por código EAN, adicionar novos produtos e exportar dados.</p>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <strong><i class="fas fa-list text-success me-1"></i> Painel de Listas</strong>
+                                            <p class="small mb-0">Pode visualizar listas enviadas, enviar novas listas e acompanhar validações.</p>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <strong><i class="fas fa-crown text-warning me-1"></i> Administrador</strong>
+                                            <p class="small mb-0">Acesso completo: gerenciar usuários, responsáveis, validar listas e todas as funcionalidades.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Configurações adicionais para administradores -->
+                        <div id="configAdmin" class="d-none">
+                            <div class="row">
+                                <div class="col-12">
+                                    <div class="card bg-light">
+                                        <div class="card-body">
+                                            <h6><i class="fas fa-cog me-2"></i>Configurações de Administrador</h6>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="admin_completo" name="admin_completo" checked>
+                                                <label class="form-check-label" for="admin_completo">
+                                                    Privilégios completos de administrador
+                                                </label>
+                                            </div>
+                                            <div class="form-text">
+                                                Administradores têm acesso a todas as funcionalidades do sistema
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <div class="d-flex justify-content-between">
+                                    <a href="{{ url_for('admin_panel') }}" class="btn btn-secondary">
+                                        <i class="fas fa-times me-1"></i> Cancelar
+                                    </a>
+                                    <button type="submit" class="btn btn-success">
+                                        <i class="fas fa-user-plus me-1"></i> Criar Usuário
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const tipoUsuarioSelect = document.getElementById('tipo_usuario');
+    const configAdmin = document.getElementById('configAdmin');
+    const formCriarUsuario = document.getElementById('formCriarUsuario');
+    
+    // Mostrar/ocultar configurações de admin
+    tipoUsuarioSelect.addEventListener('change', function() {
+        if (this.value === 'admin') {
+            configAdmin.classList.remove('d-none');
+        } else {
+            configAdmin.classList.add('d-none');
+        }
+    });
+    
+    // Validação do formulário
+    formCriarUsuario.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const nome = document.getElementById('nome').value.trim();
+        const senha = document.getElementById('senha').value;
+        const confirmarSenha = document.getElementById('confirmar_senha').value;
+        const tipoUsuario = document.getElementById('tipo_usuario').value;
+        
+        // Validações
+        if (nome.length < 3) {
+            mostrarAlerta('Nome de usuário deve ter pelo menos 3 caracteres', 'danger');
+            return;
+        }
+        
+        if (!/^[a-zA-Z0-9_-]+$/.test(nome)) {
+            mostrarAlerta('Nome de usuário pode conter apenas letras, números, _ e -', 'danger');
+            return;
+        }
+        
+        if (senha.length < 4) {
+            mostrarAlerta('Senha deve ter pelo menos 4 caracteres', 'danger');
+            return;
+        }
+        
+        if (senha !== confirmarSenha) {
+            mostrarAlerta('Senhas não coincidem', 'danger');
+            return;
+        }
+        
+        if (!tipoUsuario) {
+            mostrarAlerta('Selecione um tipo de usuário', 'danger');
+            return;
+        }
+        
+        // Enviar formulário
+        const formData = new FormData(this);
+        
+        fetch('{{ url_for("admin.criar_usuario") }}', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mostrarAlerta('Usuário criado com sucesso!', 'success');
+                setTimeout(() => {
+                    window.location.href = '{{ url_for("admin_panel") }}';
+                }, 2000);
+            } else {
+                mostrarAlerta('Erro ao criar usuário: ' + data.message, 'danger');
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            mostrarAlerta('Erro ao criar usuário', 'danger');
+        });
+    });
+});
+
+function mostrarAlerta(mensagem, tipo) {
+    // Remover alertas existentes
+    const alertasExistentes = document.querySelectorAll('.alert-temp');
+    alertasExistentes.forEach(alerta => alerta.remove());
+    
+    // Criar novo alerta
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${tipo} alert-dismissible fade show alert-temp position-fixed`;
+    alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    alertDiv.innerHTML = `
+        ${mensagem}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(alertDiv);
+    
+    // Remover automaticamente após 5 segundos
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.remove();
+        }
+    }, 5000);
+}
+</script>
+{% endblock %}
+
