@@ -1,0 +1,12 @@
+__pycache__/
+venv/
+*.pyc
+*.db
+*.xlsx
+server.log
+instalar.bat
+iniciar_sistema.bat
+instalar-rapido.ps1
+iniciar-simples.ps1
+
+
