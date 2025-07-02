@@ -27,8 +27,8 @@ app = Flask(__name__,
            static_folder=os.path.join(os.path.dirname(__file__), 'static'),
            template_folder=os.path.join(os.path.dirname(__file__), 'templates'))
 
-app.config['SECRET_KEY'] = 'ean_system_secret_key_windows11'
-app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{os.path.join(os.path.dirname(__file__), 'database', 'ean_system.db')}"
+app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "ean_system_secret_key_windows11")
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///./src/database/ean_system.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
@@ -363,5 +363,4 @@ def export_excel():
     return send_file(excel_path, as_attachment=True, download_name='produtos_ean.xlsx')
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5002)
-
+    app.run(debug=True, host=\'0.0.0.0\', port=os.environ.get(\'PORT\', 5002))
